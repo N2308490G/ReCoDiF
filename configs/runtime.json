@@ -1,0 +1,21 @@
+{
+  "cpu_model": "Intel Core i7-14700F",
+  "cpu_physical_cores": "20",
+  "cpu_logical_processors": "28",
+  "memory_installed_gib": "32",
+  "memory_type": "DDR5",
+  "memory_configured_rate_mt_s": "5600",
+  "operating_system": "Windows 11",
+  "device": "CPU",
+  "precision": "network_float32;likelihood_and_sensitive_numerics_float64;AMP_disabled",
+  "batch_size": "1",
+  "draw_count": "512",
+  "sample_microbatch": "32",
+  "warmup_repeats": "10",
+  "timing_repeats": "30",
+  "intraop_threads": "8",
+  "interop_threads": "1",
+  "timing_rule": "perf_counter_ns_wall_clock;one_complete_evidence_output;include_encoding_reverse_refinement_likelihood_and_final_transition;predeclare_evidence_cases",
+  "result_summary": "median_and_IQR_seconds_from_30_timed_repeats_after_10_warmups",
+  "peak_memory_rule": "process_peak_RSS_in_fresh_process_per_case;report_baseline_and_peak;unit_MiB"
+}

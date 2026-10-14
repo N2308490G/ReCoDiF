@@ -1,0 +1,16 @@
+\begin{table*}[t]
+\centering
+\caption{Data and test cases.}\label{tab:public-data}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.18\textwidth}>{\raggedright\arraybackslash}p{0.50\textwidth}>{\raggedright\arraybackslash}X@{}}
+\toprule
+Experiment & Data & Assessment\\
+\midrule
+B10 borehole & Depths 7.0 and 8.5 m; 6278 stored values; 32 targets/depth; five seeds, 512 draws/seed. & NMR spectra, prediction, allocation, and cost.\\
+Predictive spectra & Twelve records: seven nominal, three low-SNR, two kernel-mismatch; $16\times24$ echoes/record; three ensembles, 64 draws each. & Error and uncertainty.\\
+Regional distributions & Four laws; 512 draws/law; 16 regional amplitudes. & Distributional agreement.\\
+Conditional split & 32 parent masses, 0.2--1.4 a.u.; 64 bins; 1200 counts/case. & Allocation accuracy.\\
+Observation fusion & Four base, ten complementary, six held-out signals; 25 interventions and one base case; 256 draws/case. & Fusion and timing sensitivity.\\
+\bottomrule
+\end{tabularx}
+\end{table*}
