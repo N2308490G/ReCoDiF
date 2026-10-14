@@ -1,0 +1,13 @@
+{
+  "width": 64,
+  "heads": 4,
+  "blocks": 2,
+  "residual_bound": 20.0,
+  "kappa": 1.0,
+  "sigma": 1.0,
+  "reference_total_mass": 1.0,
+  "terminal_time": 5.0,
+  "minimum_training_time": 0.01,
+  "time_weight": "constant",
+  "implementation_note": "Explicit defaults for quantities not specified in the manuscript; not recovered historical architecture settings."
+}

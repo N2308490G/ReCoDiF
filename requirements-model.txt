@@ -1,0 +1,4 @@
+-r requirements-lock.txt
+torch>=2.6,<3
+scipy>=1.15,<2
+arviz==0.22.0

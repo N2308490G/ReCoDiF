@@ -1,2 +1,2 @@
-"""ReCoDiF result analysis and manuscript reproduction utilities."""
-__version__ = '0.1.0'
+"""ReCoDiF diffusion fusion model and manuscript analysis utilities."""
+__version__ = '0.2.0'

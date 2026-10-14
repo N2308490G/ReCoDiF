@@ -1,13 +1,17 @@
 # ReCoDiF
 
-Companion analysis code and parameter settings for **ReCoDiF: A
+Code and parameter settings for **ReCoDiF: A
 resolution-consistent diffusion fusion model for probabilistic NMR inversion**.
 
-The executable package rebuilds the manuscript's experimental figures and
-tables from the accompanying CSV results. It includes the shared data readers,
-plotting and tabulation programs, metric utilities, experimental settings, and
-the editable framework figure. Model training/inference programs and trained
-checkpoints are not included in this release.
+The package implements the shared conditional flux, CIR denoising,
+cross-resolution EMA training, and mass-preserving coarse-to-fine inference.
+It also rebuilds the manuscript's figures and tables from the accompanying
+CSV results. A small runnable example covers reference sampling, training,
+validation selection, checkpointing and posterior prediction.
+
+The model code was implemented from the manuscript; historical trained
+checkpoints are not included. Implementation choices and input formats are
+documented in the [model guide](docs/MODEL_IMPLEMENTATION.md).
 
 ## Method overview
 
@@ -45,6 +49,29 @@ The manuscript uses Times New Roman. Install that font for matching typography.
 To run on a machine without it, explicitly choose the bundled Matplotlib font
 with `--font "DejaVu Serif"`; numerical values are unchanged, but typography
 differs. Fonts are not redistributed in this repository.
+
+## Train and sample
+
+```bash
+# Install a CPU PyTorch build (omit this line if the desired build is installed):
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements-model.txt
+
+# Self-contained small example; no external data preparation required:
+python main.py demo --out outputs/model_demo
+
+# Train one fold from prepared retained-evidence/reference-draw inputs:
+python main.py train --manifest inputs/fold_01.json --out runs/fold01_seed1001
+
+# Use validation-selected online weights:
+python main.py infer --checkpoint runs/fold01_seed1001/best.pt \
+  --case inputs/test_01.npz --out outputs/test_01_posterior.npz --draws 512
+```
+
+The model guide describes the NPZ/manifest format, reference-posterior
+generation, custom configurations, checkpoint resume and CPU/CUDA use.
+`--device cuda` selects an available GPU; CPU is the default. Demo outputs are
+a new controlled software example, separate from the manuscript's CSVs.
 
 ## Reproduce the manuscript outputs
 
@@ -88,6 +115,11 @@ fails.
 | Tables 1 and 3: data and comparison tasks | `assets/Table_Data.tex`, `assets/Table_Baselines.tex` |
 | CSV readers and plotting style | `scripts/experiment_data.py`, `scripts/completed_results.py` |
 | Empirical CRPS, intervals, regional discrepancy | `recodif/metrics.py` |
+| Shared conditional network | `recodif/model.py` |
+| CIR corruption, analytic targets and positive steps | `recodif/cir.py` |
+| Paired-state training, EMA, validation and resume | `recodif/training.py` |
+| Conditional splitting and posterior sampling | `recodif/refinement.py`, `recodif/sampling.py` |
+| Lognormal posterior references | `recodif/reference.py` |
 
 ## Experimental settings
 
@@ -96,11 +128,13 @@ fails.
 | `configs/training.json` | AdamW, learning-rate schedule, denoising warm-up, aggregation weight, EMA, seeds, tuning and validation selection |
 | `configs/runtime.json` | CPU/memory specification, precision, draw counts, threads, warm-up and timing protocol |
 | `configs/protocol.json` | B10 records, normalization, reference grid, prior, refinement schedule, intervals and site-fold roles |
+| `configs/model.json` | Explicit network/CIR defaults for quantities not numerically fixed by the paper |
 | `data/settings/` | Parameter tables used by the original manuscript tabulation programs |
 
-These settings describe the paper's protocol; they are not executable
-model-training configurations. The four configuration topics are optimization,
-matched training/tuning budgets, site-level validation, and runtime measurement.
+The trainer uses the optimization and validation settings; the sampler uses
+the prescribed refinement settings. One invocation runs one fold and seed.
+The model guide identifies the additional implementation choices and explains
+how to supply full acquisition inputs and posterior reference draws.
 
 The primary B10 comparison covers depths 7.0 and 8.5 m, seeds 1001–1005, and
 512 draws per seed. Scores average depths within each seed before reporting
@@ -137,9 +171,12 @@ evaluate the same empirical pairwise formula.
 python -m unittest discover -s tests -v
 ```
 
-The focused tests compare score utilities with explicit pairwise definitions,
-known scalar/vector examples, and input validation. GitHub Actions also runs
-the complete figure/table entry point using DejaVu Serif.
+Install the model requirements to run the complete test suite. It checks
+scores, CIR formulas, conditional allocation, mass conservation, gradients,
+EMA timing, small-batch learning and checkpoint continuation. GitHub Actions
+also runs a short training/inference example and the complete figure/table
+entry point using DejaVu Serif. Analysis-only installations can run
+`python -m unittest discover -s tests -p test_metrics.py -v`.
 
 ## Citation and license
 

@@ -22,7 +22,12 @@ TABLES = ['generate_result_tables.py', 'generate_completed_tables.py']
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] in ('train', 'infer', 'reference', 'demo'):
+        from .model_cli import main as model_main
+        return model_main(argv)
+    parser = argparse.ArgumentParser(description=__doc__,
+        epilog='Model commands: train, infer, reference, demo. Use COMMAND --help for details.')
     parser.add_argument('command', choices=['all', 'figures', 'tables'])
     parser.add_argument('--only', choices=list(FIGURES), help='Rebuild one experimental figure.')
     parser.add_argument('--data-dir', type=Path, default=ROOT / 'data')
