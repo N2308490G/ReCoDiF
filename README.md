@@ -1,7 +1,7 @@
 # ReCoDiF
 
 Code and parameter settings for **ReCoDiF: A
-resolution-consistent diffusion fusion model for probabilistic NMR inversion**.
+resolution-consistent diffusion fusion model for probabilistic NMR inversion of geological materials**.
 
 The package implements the shared conditional flux, CIR denoising,
 cross-resolution EMA training, and mass-preserving coarse-to-fine inference.
@@ -192,7 +192,7 @@ entry point using DejaVu Serif. Analysis-only installations can run
 ## Citation and license
 
 Wenbiao Yang and Zhiquan Liu. *ReCoDiF: A resolution-consistent diffusion fusion
-model for probabilistic NMR inversion*. Manuscript.
+model for probabilistic NMR inversion of geological materials*. Manuscript.
 
 Source code and repository documentation use the [MIT license](LICENSE).
 Third-party observations retain their source license. The code license does
