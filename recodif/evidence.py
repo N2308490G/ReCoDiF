@@ -64,8 +64,9 @@ def nmr_kernel(grid, recovery_s, echo_s, contrast=2.0, quadrature_order=4):
     Integrated cell masses multiply this kernel. Log-cell averaging is a
     discretization choice used only when constructing the fixed likelihood.
     """
-    recovery, echo = np.broadcast_arrays(np.asarray(recovery_s, float), np.asarray(echo_s, float))
-    if np.any(recovery < 0) or np.any(echo < 0) or not np.all(np.isfinite(recovery+echo)) or contrast not in (1, 2):
+    recovery, echo, contrast = np.broadcast_arrays(np.asarray(recovery_s, float), np.asarray(echo_s, float),
+                                                    np.asarray(contrast, float))
+    if np.any(recovery < 0) or np.any(echo < 0) or not np.all(np.isfinite(recovery+echo)) or not np.all(np.isin(contrast, [1, 2])):
         raise ValueError('Use finite nonnegative times and contrast 1 (SR) or 2 (IR).')
     if quadrature_order < 1:
         raise ValueError('Quadrature order must be positive.')
@@ -74,7 +75,7 @@ def nmr_kernel(grid, recovery_s, echo_s, contrast=2.0, quadrature_order=4):
         log_points = (edges[:-1, None]+edges[1:, None])/2 + np.diff(edges)[:, None]*nodes/2
         values = np.exp(-times.ravel()[:, None, None] / 10.0**log_points[None])
         return values @ (weights/2)
-    first = 1-contrast*averages(grid.t1, recovery)
+    first = 1-contrast.ravel()[:, None]*averages(grid.t1, recovery)
     second = averages(grid.t2, echo)
     return (first[:, :, None]*second[:, None, :]).reshape(recovery.size, grid.size)
 

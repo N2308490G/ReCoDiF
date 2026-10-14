@@ -84,6 +84,13 @@ sampling API also accepts explicitly supplied coarsest terminal draws.
 
 ## Input format
 
+Download the original field/laboratory measurements from the
+[Zenodo record](https://zenodo.org/records/14947500) or
+[complete ZIP (286.5 MB)](https://zenodo.org/api/records/14947500/files/Mashhadi%20et%20al%20(T1-T2%20Data).zip/content).
+Extract under `data/raw/` and place prepared case files and manifests under
+`inputs/`. [The data guide](../data/README.md) gives the B10 paths inside the
+archive. The training/reference command help also displays these links.
+
 Provide one `.npz` file per evidence set. NumPy object arrays/pickle are not
 used. All cell arrays flatten the fixed grid in row-major order: T1 first, T2
 second. Acquisition times for `nmr_kernel` are **seconds**; edge coordinates
@@ -100,8 +107,11 @@ values.
 | `retained_mask` (optional) | Boolean `[O]`; remove missing rows before whitening |
 | `observation_ids` (optional) | String `[O]`; shared IDs only for exact copies |
 | `reference_draws` (training) | `[draw,J]` or `[chain,draw,J]` posterior **mass** samples conditioned only on retained context |
+| `reference_chain_draws` (reference output) | Full `[chain,draw,J]` samples retained for diagnostics, separate from the training budget |
+| `reference_selected_indices` (reference output) | `[training draw,2]` source chain/draw indices of the selected training subset |
 | `reference_retained_indices` (optional) | Retained original indices used by the reference sampler |
 | `y_holdout` (validation/evaluation) | `[H]`; never sent to the model or reference sampler |
+| `heldout_train_ids` (validation) | String or integer `[H]` identifying each target's recovery train; required for per-train RMSE |
 | `K_holdout` | `[H,J]` |
 | `covariance_hh` | `[H,H]` |
 | `covariance_ho` (optional) | `[H,O]` in original observation order; omitted means independent context/held-out noise |
@@ -116,11 +126,11 @@ Example manifest (paths relative to the manifest):
 ```json
 {
   "cases": [
-    {"record_id": "train_01", "site_id": "site_A", "role": "train",
+    {"record_id": "train_01", "site_id": "site_A", "well_id": "well_A", "mask_id": "0", "role": "train",
      "scale": 10.0, "path": "train_01_with_references.npz"},
-    {"record_id": "val_01", "site_id": "site_B", "role": "validation",
+    {"record_id": "val_01", "site_id": "site_B", "well_id": "well_B", "mask_id": "0", "role": "validation",
      "scale": 10.0, "path": "val_01.npz"},
-    {"record_id": "test_01", "site_id": "site_C", "role": "test",
+    {"record_id": "test_01", "site_id": "site_C", "well_id": "well_C", "mask_id": "0", "role": "test",
      "scale": 10.0, "path": "test_01.npz"}
   ]
 }
@@ -128,10 +138,17 @@ Example manifest (paths relative to the manifest):
 
 Keep wells/specimens and shared sites together when preparing folds. The
 loader rejects a site assigned to multiple roles. Training reads only train
-and validation cases, with test and recalibration records excluded. Validation
-averages each record's normalized held-out RMSE within site, then averages
-sites equally. Strictly smaller scores replace `best.pt`, preserving the
-earliest checkpoint on an exact tie. Its weights are the **online** network.
+and validation cases, with test and recalibration records excluded. Distinct
+`mask_id` values allow multiple evidence masks for the same physical record;
+`(site_id, well_id, record_id, mask_id)` must be unique. Use the specimen ID as
+`well_id` for laboratory data. Validation requires this grouping metadata and
+does not silently collapse all targets into one recovery train.
+
+Validation computes normalized RMSE **separately for each recovery train**, then
+equally averages trains, masks within each depth record, records within each
+well, wells within each site, and sites. Strictly smaller scores replace
+`best.pt`, preserving the earliest checkpoint on an exact tie. Its weights are
+the **online** network.
 
 The acquisition CSVs included for manuscript plotting are selected echoes.
 Full field training requires the original acquisition inputs, specified
@@ -154,7 +171,8 @@ python main.py demo --steps 8 --out outputs/quick_demo
 
 # Reference sampling from retained evidence under the lognormal prior:
 python main.py reference --case inputs/train_01.npz \
-  --out inputs/train_01_with_references.npz --chains 4 --draws 512 --burnin 1000
+  --out inputs/train_01_with_references.npz --chains 4 --draws 512 \
+  --draws-per-chain 512 --burnin 1000
 
 # One fold/seed with the paper's training and refinement settings:
 python main.py train --manifest inputs/fold_01.json --out runs/fold01_seed1001 --seed 1001
@@ -178,8 +196,14 @@ time per stage. Binary boundaries are inherited from the supplied finest
 log-grid; each parent spans an even number of reference cells per split axis.
 Do not infer the historical nonuniform edges from the domain endpoints alone.
 
-`reference` saves all chains and reports rank-normalized R-hat and bulk/tail
-ESS for total and specified regional amplitudes. It exits with code 2 if the
+`reference` retains all chains in `reference_chain_draws` and reports
+rank-normalized R-hat and bulk/tail ESS for total and specified regional
+amplitudes. `--draws` specifies the **total training budget per evidence set**
+(512), whereas `--draws-per-chain` specifies the diagnostic chain length
+(default 512 on each of four chains). A fixed, seed-controlled, chain-balanced
+subset of 512 is selected with one draw from each temporal stratum; its source
+indices are saved. The trainer checks the configured reference budget instead
+of training on every diagnostic draw. The `reference` command exits with code 2 if the
 paper's thresholds (`R-hat < 1.01`, both ESS `> 400`) are unmet; sampled chains
 are retained. Regions must align with reference cell boundaries. Increase the
 sampling budget as needed; a requested draw count alone does not establish
@@ -187,10 +211,17 @@ convergence. `demo` uses short reference runs solely to exercise the software.
 
 `history.csv` records actual losses and validation scores. `latest.pt` contains
 online and teacher weights, optimizer state, update count, configurations,
-best score, data roles and NumPy/PyTorch RNG states. Same-environment CPU
+best score **and selected online weights**, data roles and NumPy/PyTorch RNG states.
+Thus resuming into a new run directory preserves the previous selection even
+if no subsequent checkpoint improves it. `best.pt` is an inference-only
+snapshot; continue optimization from `latest.pt`. Same-environment CPU
 continuation is tested against an uninterrupted next update. Resume assumes
 the underlying input files are unchanged; a seed does not ensure identical
 trajectories across devices or software versions.
+
+Checkpoint selection records its metric definition. Checkpoints selected by
+the earlier flattened-echo RMSE remain readable for inference, but cannot carry
+that old score into a resumed run using the corrected hierarchical metric.
 
 ## Numerical choices and checks
 
@@ -205,6 +236,14 @@ small beta shapes can place a child below floating-point resolution. Failed
 potential convergence or quadrature is reported rather than silently replaced
 by a uniform split. This direct implementation favors explicit scientific
 operations; no claim is made that its runtime matches the historical CSVs.
+
+Command defaults read `configs/runtime.json`: 8 PyTorch intra-operation
+threads, 1 inter-operation thread, and at most 32 state rows per neural
+sampling call. `--threads`, `--interop-threads`, and `--sample-microbatch`
+provide explicit overrides. The evidence is encoded once per evidence set;
+reverse updates and allocation-candidate evaluations reuse that encoding.
+The random-number order is independent of neural microbatch boundaries,
+although neural floating-point roundoff can vary with batch size.
 
 The tests cover analytic CIR scores, transition moments and aggregation,
 positive steps including zero frozen coefficient, singular beta endpoints,

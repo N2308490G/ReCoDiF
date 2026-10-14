@@ -7,6 +7,26 @@ stationary gamma initializer used by the reverse diffusion.
 import numpy as np
 
 
+def select_reference_draws(chains, count=512, seed=1001):
+    """Choose a fixed chain-balanced training budget; retain full chains separately."""
+    samples = np.asarray(chains, dtype=np.float64)
+    if samples.ndim != 3 or samples.shape[0] < 4 or samples.shape[1] < 1 or not np.all(np.isfinite(samples)) or np.any(samples < 0):
+        raise ValueError('Expected finite nonnegative [chain,draw,cell] references from at least four chains.')
+    if not isinstance(count, (int, np.integer)) or count < samples.shape[0] or count > np.prod(samples.shape[:2]):
+        raise ValueError('The reference budget must span every chain and not exceed available draws.')
+    rng = np.random.default_rng(seed)
+    counts = np.full(samples.shape[0], count//samples.shape[0])
+    counts[rng.permutation(samples.shape[0])[:count % samples.shape[0]]] += 1
+    chosen = []
+    for chain, number in enumerate(counts):
+        # One randomly selected draw per temporal stratum, without replacement.
+        boundaries = np.linspace(0, samples.shape[1], int(number)+1, dtype=int)
+        indices = [rng.integers(left, right) for left, right in zip(boundaries[:-1], boundaries[1:])]
+        chosen.extend((chain, int(index)) for index in indices)
+    indices = np.asarray(chosen, dtype=np.int64)
+    return samples[indices[:, 0], indices[:, 1]], indices
+
+
 def lognormal_prior(grid, settings):
     centers = grid.centers.copy()
     centers[:, 0] = (centers[:, 0]-grid.t1[0])/(grid.t1[-1]-grid.t1[0])

@@ -48,6 +48,11 @@ class FiniteLikelihoodTests(unittest.TestCase):
         assert_allclose(kernel[0], -1.)
         assert_allclose(kernel[1], 1., atol=1e-10)
 
+    def test_mixed_ir_sr_protocols_share_one_kernel(self):
+        kernel = nmr_kernel(self.grid, [0., 0.], [0., 0.], contrast=[1., 2.])
+        assert_allclose(kernel[0], 0.)
+        assert_allclose(kernel[1], -1.)
+
     def test_marginal_quantiles_are_draw_level(self):
         x = np.array([[1., 0., 0., 3.], [0., 3., 1., 0.], [5., 1., 1., 2.]])
         summary = summarize(x, self.grid)

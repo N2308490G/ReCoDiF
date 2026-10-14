@@ -52,6 +52,13 @@ differs. Fonts are not redistributed in this repository.
 
 ## Train and sample
 
+Download the raw borehole/laboratory data from the
+[Zenodo dataset page](https://zenodo.org/records/14947500) or the
+[complete ZIP (286.5 MB)](https://zenodo.org/api/records/14947500/files/Mashhadi%20et%20al%20(T1-T2%20Data).zip/content).
+Extract to `data/raw/`, then prepare the NPZ cases and fold manifests in `inputs/`
+as described in [data/README.md](data/README.md). The small demo below prepares
+its own inputs.
+
 ```bash
 # Install a CPU PyTorch build (omit this line if the desired build is installed):
 python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
@@ -72,6 +79,10 @@ The model guide describes the NPZ/manifest format, reference-posterior
 generation, custom configurations, checkpoint resume and CPU/CUDA use.
 `--device cuda` selects an available GPU; CPU is the default. Demo outputs are
 a new controlled software example, separate from the manuscript's CSVs.
+The paper settings default to 512 total training references per evidence set,
+128 validation draws, 512 test draws and sampling microbatches of 32.
+Validation metadata identifies recovery trains, masks, depth records and
+wells/specimens so scores follow the paper's aggregation order.
 
 ## Reproduce the manuscript outputs
 
